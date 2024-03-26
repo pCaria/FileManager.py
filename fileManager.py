@@ -1,4 +1,4 @@
-from os import scandir, rename
+from os import scandir, rename, makedirs
 from os.path import splitext, exists, join
 from shutil import move
 from time import sleep
@@ -6,6 +6,7 @@ import logging
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+# In source_dir, you must add the path to your download directory. Change the "H:\Downloads" to the path of your computer download folder.
 source_dir = "H:\Downloads"
 
 destination_directories = {
@@ -79,7 +80,8 @@ destination_directories = {
     ],
 }
 
-#This function makes every filename unique by using a counter, avoiding problems with duplicates.
+
+# This function makes every filename unique by using a counter, avoiding problems with duplicates.
 def make_unique(dest, name):
     filename, extension = splitext(name)
     counter = 1
@@ -88,7 +90,8 @@ def make_unique(dest, name):
         counter += 1
     return name
 
-#Responsible for every file move, renaming the file using the make_unique function, then moving it.
+
+# Responsible for every file move, renaming the file using the make_unique function, then moving it.
 def move_file(dest, entry, name):
     if exists(f"{dest}/{name}"):
         unique_name = make_unique(dest, name)
@@ -97,7 +100,8 @@ def move_file(dest, entry, name):
         rename(oldName, newName)
     move(entry.path, dest)
 
-#Uses a for loop to get the folder name 'dest_dir' and the extensions inside the dictionary. Then use the move_file, addressing the correct destination by concatenating 'source_dir' and 'dest_dir' with the os.path join.
+
+# Uses a for loop to get the folder name 'dest_dir' and the extensions inside the dictionary. Then use the move_file, addressing the correct destination by concatenating 'source_dir' and 'dest_dir' with the os.path join.
 def address_move_files(entry_obj, name):
     if name.startswith("."):
         return
@@ -107,8 +111,17 @@ def address_move_files(entry_obj, name):
             logging.info(f"Moved existing {dest_dir.lower()} files: {name}")
 
 
+# Check if the destination directories exist, creating them if they don't.
+def create_dest_dir():
+    for dest_dir in destination_directories.keys():
+        dir_path = join(source_dir, dest_dir)
+        if not exists(dir_path):
+            makedirs(dir_path)
+            logging.info(f"Created directory: {dir_path}")
+
+
 class FileMover(FileSystemEventHandler):
-    #When a file is created, this function will be triggered and the file will be addressed to its correct destination folder.
+
     def on_created(self, event):
         if event.is_directory:
             return
@@ -124,6 +137,8 @@ if __name__ == "__main__":
         format="%(asctime)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    # Before doing anything, check if destination folders exists, and create them if they don't.
+    create_dest_dir()
 
     # Organize existing files.
     with scandir(source_dir) as entries:
